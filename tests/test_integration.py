@@ -1,0 +1,169 @@
+"""Tests for the Renogy BLE Home Assistant integration setup and entities."""
+
+from unittest.mock import AsyncMock, MagicMock, patch
+import pytest
+from homeassistant.const import CONF_ADDRESS
+
+from custom_components.renogy.const import (
+    CONF_DEVICE_IDS,
+    CONF_SCAN_INTERVAL,
+    DOMAIN,
+)
+
+
+@pytest.mark.asyncio
+async def test_integration_setup_and_unload() -> None:
+    """Test full integration setup and unload with mock coordinator."""
+    hass = MagicMock()
+    hass.data = {}
+    hass.config_entries = MagicMock()
+    hass.config_entries.async_forward_entry_setups = AsyncMock(return_value=True)
+    hass.config_entries.async_unload_platforms = AsyncMock(return_value=True)
+
+    entry = MagicMock()
+    entry.entry_id = "test_entry"
+    entry.data = {
+        CONF_ADDRESS: "AA:BB:CC:DD:EE:FF",
+        CONF_DEVICE_IDS: [1],
+        CONF_SCAN_INTERVAL: 30,
+    }
+    entry.options = {}
+
+    # Mock Coordinator
+    mock_coordinator = MagicMock()
+    mock_coordinator.address = "AA:BB:CC:DD:EE:FF"
+    mock_coordinator.data = {
+        1: {
+            "device_type": "controller",
+            "model": "Rover-40A",
+            "is_available": True,
+            "battery_percentage": 90,
+            "charging_status": "floating",
+            "load_status": False,
+        }
+    }
+    mock_coordinator.async_config_entry_first_refresh = AsyncMock()
+    mock_coordinator.async_stop = MagicMock()
+    mock_coordinator.async_shutdown = AsyncMock()
+
+    with patch(
+        "custom_components.renogy.RenogyActiveBluetoothCoordinator",
+        return_value=mock_coordinator,
+    ):
+        # Load integration
+        from custom_components.renogy import async_setup_entry, async_unload_entry
+
+        assert await async_setup_entry(hass, entry) is True
+        assert hass.config_entries.async_forward_entry_setups.called
+
+        # Unload integration
+        assert await async_unload_entry(hass, entry) is True
+        assert mock_coordinator.async_stop.called
+
+
+@pytest.mark.asyncio
+async def test_sensor_setup() -> None:
+    """Test sensor platform setup and state updates."""
+    hass = MagicMock()
+    hass.data = {}
+
+    # Register entry
+    entry = MagicMock()
+    entry.entry_id = "test_entry"
+    entry.data = {
+        CONF_ADDRESS: "AA:BB:CC:DD:EE:FF",
+        CONF_DEVICE_IDS: [1],
+        CONF_SCAN_INTERVAL: 30,
+    }
+
+    mock_coordinator = MagicMock()
+    mock_coordinator.address = "AA:BB:CC:DD:EE:FF"
+    mock_coordinator.data = {
+        1: {
+            "device_type": "controller",
+            "model": "Rover-40A",
+            "is_available": True,
+            "battery_percentage": 90,
+            "charging_status": "floating",
+        }
+    }
+    mock_coordinator.last_update_success = True
+
+    hass.data[DOMAIN] = {
+        entry.entry_id: {
+            "coordinator": mock_coordinator,
+        }
+    }
+
+    # Setup sensor platform
+    from custom_components.renogy.sensor import async_setup_entry as async_setup_sensors
+
+    async_add_entities = MagicMock()
+    await async_setup_sensors(hass, entry, async_add_entities)
+
+    assert async_add_entities.called
+    created_entities = async_add_entities.call_args[0][0]
+
+    # Find the battery percentage sensor
+    battery_sensor = next(
+        entity
+        for entity in created_entities
+        if entity.entity_description.key == "battery_percentage"
+    )
+
+    assert battery_sensor.native_value == 90
+    assert battery_sensor.available is True
+    assert battery_sensor.unique_id == "AA:BB:CC:DD:EE:FF_1_battery_percentage"
+
+
+@pytest.mark.asyncio
+async def test_switch_setup_and_control() -> None:
+    """Test switch platform setup, control, and state."""
+    hass = MagicMock()
+    hass.data = {}
+
+    entry = MagicMock()
+    entry.entry_id = "test_entry"
+
+    mock_coordinator = MagicMock()
+    mock_coordinator.address = "AA:BB:CC:DD:EE:FF"
+    mock_coordinator.data = {
+        1: {
+            "device_type": "controller",
+            "model": "Rover-40A",
+            "is_available": True,
+            "load_status": True,
+        }
+    }
+    mock_coordinator.last_update_success = True
+    mock_coordinator.async_write_register = AsyncMock()
+
+    hass.data[DOMAIN] = {
+        entry.entry_id: {
+            "coordinator": mock_coordinator,
+        }
+    }
+
+    # Setup switch platform
+    from custom_components.renogy.switch import (
+        async_setup_entry as async_setup_switches,
+    )
+
+    async_add_entities = MagicMock()
+    await async_setup_switches(hass, entry, async_add_entities)
+
+    assert async_add_entities.called
+    created_entities = async_add_entities.call_args[0][0]
+    assert len(created_entities) == 1
+
+    load_switch = created_entities[0]
+    assert load_switch.is_on is True
+
+    # Set hass and mock async_write_ha_state so state write works without HA state machine
+    load_switch.hass = hass
+    load_switch.async_write_ha_state = MagicMock()
+
+    # Turn off the switch
+    await load_switch.async_turn_off()
+    # Writes 0 to register 0x010A
+    mock_coordinator.async_write_register.assert_called_with(1, 0x010A, 0)
