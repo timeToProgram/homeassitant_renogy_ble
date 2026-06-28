@@ -29,6 +29,7 @@ Should work, but untested:
 
 ## Features
 
+- **Multi-Device Support**: Connect and poll multiple Renogy devices (e.g., charge controllers, batteries, and inverters) over a single active BLE connection.
 - Automatic discovery of Renogy BLE devices
 - Automatic discovery of Renogy inverter devices advertising `RNGRIU*`
 - Automatic discovery of Smart Shunt 300 devices advertising `RTMShunt300*`
@@ -36,17 +37,16 @@ Should work, but untested:
 - Monitor solar panel (PV) performance metrics
 - Monitor load status and statistics
 - Monitor inverter AC output, frequency, load power, temperature, and diagnostic metadata
-- Monitor Smart Shunt voltage, current, power, state of charge, and derived energy
 - Turn the DC load output on/off (supported controllers only)
 - Monitor controller information
 - All data exposed as Home Assistant sensors
 - Energy dashboard compatible sensors
 - Configurable polling interval
-- Automatic error recovery
+- Automatic error recovery and connection retry
 
 ## Prerequisites
 
-- Home Assistant instance (version 2025.3 or newer)
+- Home Assistant instance (version 2026.4 or newer)
 - A compatible Bluetooth adapter on your Home Assistant host device
 - Bluetooth discovery enabled in Home Assistant
 
@@ -78,17 +78,11 @@ The integration is configurable through the Home Assistant UI after installation
 1. Go to Settings > Devices & Services
 2. Click the "+ Add Integration" button
 3. Search for "Renogy" and select it
-4. The integration will automatically start scanning for devices
-
-### Advanced Configuration Options
-
-- **Polling Interval**: Adjust how frequently the device is polled (10-600 seconds, default: 60)
-  - Can be configured per device in the device settings
-  - Lower values provide more frequent updates but may impact battery life
-- **Connection Mode**: Starting in `0.6.0`, devices expose connection mode options in the config entry options flow
-  - Smart Shunt 300 devices support `sustained` and `intermittent`
-  - Controllers, DCC chargers, and inverters support `intermittent` and `persistent_session`
-  - See [docs/connection-modes.md](docs/connection-modes.md) for behavior and recommendations
+4. The integration will automatically start scanning for devices, or you can select to configure manually.
+5. In the configuration dialog, configure:
+   - **Bluetooth MAC Address**: The MAC address of the Renogy BLE module/device.
+   - **Device Modbus IDs**: Comma-separated list of Modbus IDs for the connected devices (e.g. `1` for battery, `2` for inverter, or `255` for controller).
+   - **Polling Interval**: Adjust how frequently the devices are polled (10-600 seconds, default: 60).
 
 ## Sensors
 

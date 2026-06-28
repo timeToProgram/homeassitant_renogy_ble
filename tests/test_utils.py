@@ -1,6 +1,7 @@
 """Tests for utility functions."""
 
 import pytest
+
 from custom_components.renogy.utils import (
     bytes_to_ascii,
     bytes_to_int,

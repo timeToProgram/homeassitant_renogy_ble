@@ -1,6 +1,7 @@
 """Tests for the Renogy BLE config flow."""
 
 from unittest.mock import AsyncMock, MagicMock, patch
+
 import pytest
 from homeassistant.const import CONF_ADDRESS
 

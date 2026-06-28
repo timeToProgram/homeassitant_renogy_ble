@@ -13,7 +13,11 @@ We have successfully redesigned and re-implemented the Renogy BLE Home Assistant
 - **`const.py`**: Updated constants, including adding `CONF_DEVICE_IDS` and removing deprecated config parameters.
 - **`config_flow.py`**: Rebuilt the flow to support comma-separated device IDs inputs from the user during integration configuration, as well as optional manual connection details.
 - **`__init__.py`**: Configures the coordinator with the selected device IDs list and forwards setups to platforms. Supports clean shutdown and stopping of connections.
-- **`sensor.py`**: Dynamically creates sensor entities based on the probed device types and configured device IDs.
+- **`sensor.py`**: Dynamically creates sensor entities based on the probed device types and configured device IDs. Also:
+  - If there are multiple batteries, it dynamically adds a set of aggregate battery sensors that average voltages and temperatures while summing currents, powers, total capacity, and remaining capacity.
+  - Dynamically registers cell-specific voltage and temperature sensors (`Cell 1 Voltage`, `Cell 2 Voltage`, etc.) based on telemetry returned from the battery's BMS, along with their respective cell-average entities (`Average Cell Voltage`, `Average Cell Temperature`).
+  - Added status/BMS status sensors for each device type that report status (e.g. `"Normal"`, `"Alarm"`, `"Warning"`, `"Fault"`) along with state attributes containing a copy of all telemetry details.
+  - Exposed every individual binary status flag, alarm condition, and warning list as a separate sensor entity (returning `"on"`/`"off"` or string lists) defined inside `SENSOR_DESCRIPTIONS` to give users full granular access directly under the `sensor` platform.
 - **`switch.py`**: Exposes load switch entities for controllers, sending the corresponding Modbus writes to toggle load status.
 - **`manifest.json`**: Upgraded requirements to use bleak-retry-connector.
 
@@ -30,9 +34,9 @@ All verification steps described in the project guidelines have been run and pas
 - Type checked the codebase: `uv run ty check custom_components`
 
 ### 2. Unit Tests
-All unit tests have been written/updated to match the new architecture, covering utilities, parsing logic, config flow user inputs, platform setup, and entity state updates.
+All unit tests have been written/updated to match the new architecture, covering utilities, parsing logic, config flow user inputs, platform setup, and entity state updates (including the new status/diagnostic sensors).
 - Test runner output:
 ```bash
 $ uv run pytest tests
-======================== 25 passed in 1.12s =========================
+======================== 27 passed in 1.13s =========================
 ```
