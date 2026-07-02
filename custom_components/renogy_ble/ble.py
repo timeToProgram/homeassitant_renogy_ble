@@ -309,6 +309,16 @@ class RenogyActiveBluetoothCoordinator(
                     return parsed["model"]
         return f"Renogy {device_type.value.capitalize()}"
 
+    async def async_config_entry_first_refresh(self) -> None:
+        """Perform first refresh for config entry setup."""
+        await self.async_request_refresh()
+        if not self.last_update_success:
+            from homeassistant.exceptions import ConfigEntryNotReady
+
+            raise ConfigEntryNotReady(
+                f"Failed to connect to Renogy device {self.address}"
+            )
+
     async def async_request_refresh(self) -> None:
         """Request a refresh."""
         self.logger.debug("Manual refresh requested for device %s", self.address)
@@ -491,7 +501,9 @@ class RenogyActiveBluetoothCoordinator(
                 # Call callback if available
                 if self.device_data_callback:
                     try:
-                        await self.device_data_callback(self)
+                        res = self.device_data_callback(self)
+                        if asyncio.iscoroutine(res):
+                            await res
                     except Exception as e:
                         self.logger.error("Error in device data callback: %s", e)
             else:

@@ -3,7 +3,7 @@
 import logging
 from enum import Enum
 
-DOMAIN = "renogy"
+DOMAIN = "renogy_ble"
 
 LOGGER = logging.getLogger(__name__)
 

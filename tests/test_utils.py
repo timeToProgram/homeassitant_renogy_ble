@@ -2,7 +2,7 @@
 
 import pytest
 
-from custom_components.renogy.utils import (
+from custom_components.renogy_ble.utils import (
     bytes_to_ascii,
     bytes_to_int,
     create_modbus_read_request,

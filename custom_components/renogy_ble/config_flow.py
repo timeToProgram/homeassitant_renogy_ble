@@ -19,13 +19,16 @@ from homeassistant.const import CONF_ADDRESS, CONF_SCAN_INTERVAL
 
 from .const import (
     CONF_DEVICE_IDS,
+    DEFAULT_DEVICE_TYPE,
     DEFAULT_SCAN_INTERVAL,
     DOMAIN,
     LOGGER,
     MAX_SCAN_INTERVAL,
     MIN_SCAN_INTERVAL,
+    SUPPORTED_DEVICE_TYPES,
 )
 from .device_name import (
+    detect_device_type_from_ble_name,
     has_real_device_name,
     is_supported_renogy_ble_name,
 )
@@ -46,6 +49,16 @@ def _display_name_for_discovery(discovery_info: BluetoothServiceInfoBleak) -> st
         return discovery_info.name
 
     return UNKNOWN_DEVICE_NAME
+
+
+def _detect_device_type_for_discovery(discovery_info: BluetoothServiceInfoBleak) -> str:
+    """Detect the device type for a bluetooth discovery record."""
+    manufacturer_data = getattr(discovery_info.advertisement, "manufacturer_data", {})
+    return detect_device_type_from_ble_name(
+        discovery_info.name,
+        DEFAULT_DEVICE_TYPE,
+        manufacturer_data=manufacturer_data,
+    )
 
 
 class RenogyConfigFlow(ConfigFlow, domain=DOMAIN):
@@ -111,37 +124,69 @@ class RenogyConfigFlow(ConfigFlow, domain=DOMAIN):
         errors: dict[str, str] = {}
 
         if user_input is not None:
-            if self._discovered_device:
-                # Coming from bluetooth discovery with device already selected
-                user_input[CONF_ADDRESS] = self._discovered_device.address
+            # Parse the checkboxes and corresponding IDs when submitted.
+            device_ids: list[int] = []
+            for device_type in SUPPORTED_DEVICE_TYPES:
+                if user_input.get(device_type):
+                    ids_str = user_input.get(f"{device_type}_ids", "255")
+                    parsed_ids = [
+                        int(id_str.strip())
+                        for id_str in ids_str.split(",")
+                        if id_str.strip().isdigit()
+                    ]
+                    if not parsed_ids:
+                        parsed_ids = [255]
+                    device_ids.extend(parsed_ids)
 
-                # Create a config entry
-                return self.async_create_entry(
-                    title=_display_name_for_discovery(self._discovered_device),
-                    data=user_input,
-                )
-            elif CONF_ADDRESS in user_input:
-                # Manual device selection
-                address = user_input[CONF_ADDRESS]
-                discovery_info = self._discovered_devices[address]
+            if not device_ids:
+                errors["base"] = "no_device_selected"
 
-                await self.async_set_unique_id(address, raise_on_progress=False)
-                self._abort_if_unique_id_configured()
+            if not errors:
+                # Prepare entry data
+                entry_data = {
+                    CONF_DEVICE_IDS: device_ids,
+                    CONF_SCAN_INTERVAL: user_input.get(
+                        CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL
+                    ),
+                }
 
-                return self.async_create_entry(
-                    title=_display_name_for_discovery(discovery_info),
-                    data=user_input,
-                )
+                if self._discovered_device:
+                    # Coming from bluetooth discovery with device already selected
+                    entry_data[CONF_ADDRESS] = self._discovered_device.address
+
+                    # Create a config entry
+                    return self.async_create_entry(
+                        title=_display_name_for_discovery(self._discovered_device),
+                        data=entry_data,
+                    )
+                elif CONF_ADDRESS in user_input:
+                    # Manual device selection
+                    address = user_input[CONF_ADDRESS]
+                    discovery_info = self._discovered_devices[address]
+
+                    await self.async_set_unique_id(address, raise_on_progress=False)
+                    self._abort_if_unique_id_configured()
+
+                    entry_data[CONF_ADDRESS] = address
+
+                    return self.async_create_entry(
+                        title=_display_name_for_discovery(discovery_info),
+                        data=entry_data,
+                    )
 
         # If we have a discovered device from bluetooth auto-discovery,
-        # just show config options (device ids, scan interval)
+        # just show config options (device type checkboxes and ids, scan interval)
         if self._discovered_device:
-            discovered_schema = vol.Schema(
-                {
-                    vol.Required(CONF_DEVICE_IDS, default="255"): str,
-                    **SCAN_INTERVAL_SCHEMA,
-                }
-            )
+            detected_type = _detect_device_type_for_discovery(self._discovered_device)
+            schema_dict: dict[Any, Any] = {}
+            for device_type in SUPPORTED_DEVICE_TYPES:
+                schema_dict[
+                    vol.Required(device_type, default=(device_type == detected_type))
+                ] = bool
+                schema_dict[vol.Optional(f"{device_type}_ids", default="255")] = str
+            schema_dict.update(SCAN_INTERVAL_SCHEMA)
+            discovered_schema = vol.Schema(schema_dict)
+
             return self.async_show_form(
                 step_id="user",
                 data_schema=discovered_schema,
@@ -159,18 +204,21 @@ class RenogyConfigFlow(ConfigFlow, domain=DOMAIN):
             return self.async_abort(reason="no_devices_found")
 
         # Show form to select a discovered device
-        address_schema = vol.Schema(
-            {
-                vol.Required(CONF_ADDRESS): vol.In(
-                    {
-                        address: (f"{_display_name_for_discovery(info)} ({address})")
-                        for address, info in self._discovered_devices.items()
-                    }
-                ),
-                vol.Required(CONF_DEVICE_IDS, default="255"): str,
-                **SCAN_INTERVAL_SCHEMA,
-            }
-        )
+        address_schema_dict: dict[Any, Any] = {
+            vol.Required(CONF_ADDRESS): vol.In(
+                {
+                    address: (f"{_display_name_for_discovery(info)} ({address})")
+                    for address, info in self._discovered_devices.items()
+                }
+            )
+        }
+        for device_type in SUPPORTED_DEVICE_TYPES:
+            address_schema_dict[
+                vol.Required(device_type, default=(device_type == DEFAULT_DEVICE_TYPE))
+            ] = bool
+            address_schema_dict[vol.Optional(f"{device_type}_ids", default="255")] = str
+        address_schema_dict.update(SCAN_INTERVAL_SCHEMA)
+        address_schema = vol.Schema(address_schema_dict)
 
         return self.async_show_form(
             step_id="user",

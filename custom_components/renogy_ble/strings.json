@@ -6,12 +6,22 @@
         "description": "Set up Renogy BLE device: {device_name}. \n\nDefault polling interval: {default_interval} seconds.",
         "data": {
           "scan_interval": "Polling interval (seconds)",
-          "device_type": "Device Type"
+          "controller": "Controller",
+          "controller_ids": "Controller Device IDs",
+          "battery": "Battery",
+          "battery_ids": "Battery Device IDs",
+          "inverter": "Inverter",
+          "inverter_ids": "Inverter Device IDs",
+          "dcc": "DCC (DC-DC Charger)",
+          "dcc_ids": "DCC Device IDs",
+          "shunt300": "Smart Shunt 300",
+          "shunt300_ids": "Smart Shunt Device IDs"
         }
       }
     },
     "error": {
-      "unsupported_model": "This device model is not yet supported by this integration."
+      "unsupported_model": "This device model is not yet supported by this integration.",
+      "no_device_selected": "Select at least one device type."
     },
     "abort": {
       "already_configured": "Device is already configured",

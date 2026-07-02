@@ -20,7 +20,7 @@ from .const import (
 )
 
 # List of platforms this integration supports
-PLATFORMS = [Platform.SENSOR, Platform.SWITCH]
+PLATFORMS = [Platform.SENSOR, Platform.SWITCH, Platform.BINARY_SENSOR]
 
 
 class _CoordinatorShutdownProtocol(Protocol):

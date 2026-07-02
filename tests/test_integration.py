@@ -5,7 +5,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 from homeassistant.const import CONF_ADDRESS
 
-from custom_components.renogy.const import (
+from custom_components.renogy_ble.const import (
     CONF_DEVICE_IDS,
     CONF_SCAN_INTERVAL,
     DOMAIN,
@@ -48,11 +48,11 @@ async def test_integration_setup_and_unload() -> None:
     mock_coordinator.async_shutdown = AsyncMock()
 
     with patch(
-        "custom_components.renogy.RenogyActiveBluetoothCoordinator",
+        "custom_components.renogy_ble.RenogyActiveBluetoothCoordinator",
         return_value=mock_coordinator,
     ):
         # Load integration
-        from custom_components.renogy import async_setup_entry, async_unload_entry
+        from custom_components.renogy_ble import async_setup_entry, async_unload_entry
 
         assert await async_setup_entry(hass, entry) is True
         assert hass.config_entries.async_forward_entry_setups.called
@@ -97,7 +97,9 @@ async def test_sensor_setup() -> None:
     }
 
     # Setup sensor platform
-    from custom_components.renogy.sensor import async_setup_entry as async_setup_sensors
+    from custom_components.renogy_ble.sensor import (
+        async_setup_entry as async_setup_sensors,
+    )
 
     async_add_entities = MagicMock()
     await async_setup_sensors(hass, entry, async_add_entities)
@@ -146,7 +148,7 @@ async def test_switch_setup_and_control() -> None:
     }
 
     # Setup switch platform
-    from custom_components.renogy.switch import (
+    from custom_components.renogy_ble.switch import (
         async_setup_entry as async_setup_switches,
     )
 
@@ -160,7 +162,8 @@ async def test_switch_setup_and_control() -> None:
     load_switch = created_entities[0]
     assert load_switch.is_on is True
 
-    # Set hass and mock async_write_ha_state so state write works without HA state machine
+    # Set hass and mock async_write_ha_state so state write works
+    # without HA state machine
     load_switch.hass = hass
     load_switch.async_write_ha_state = MagicMock()
 
@@ -222,7 +225,9 @@ async def test_battery_aggregate_sensors() -> None:
         }
     }
 
-    from custom_components.renogy.sensor import async_setup_entry as async_setup_sensors
+    from custom_components.renogy_ble.sensor import (
+        async_setup_entry as async_setup_sensors,
+    )
 
     async_add_entities = MagicMock()
     await async_setup_sensors(hass, entry, async_add_entities)
@@ -351,7 +356,9 @@ async def test_bms_status_sensor() -> None:
         }
     }
 
-    from custom_components.renogy.sensor import async_setup_entry as async_setup_sensors
+    from custom_components.renogy_ble.sensor import (
+        async_setup_entry as async_setup_sensors,
+    )
 
     async_add_entities = MagicMock()
     await async_setup_sensors(hass, entry, async_add_entities)
@@ -368,30 +375,81 @@ async def test_bms_status_sensor() -> None:
     assert bms_sensor.native_value == "Alarm"
     assert bms_sensor.available is True
 
-    # Verify the extra state attributes on the sensor
-    attrs = bms_sensor.extra_state_attributes
-    assert attrs["heater_on"] is True
-    assert attrs["fully_charged"] is False
-    assert "short_circuit" in attrs["alarms"]
+    # Verify separate status/diagnostics sensors are skipped under sensor platform
+    assert not any(
+        entity.entity_description.key == "heater_on" for entity in created_entities
+    )
+    assert not any(
+        entity.entity_description.key == "fully_charged" for entity in created_entities
+    )
 
-    # Verify separate status/diagnostics sensors
+
+@pytest.mark.asyncio
+async def test_binary_sensor_setup() -> None:
+    """Test binary sensor platform setup and state updates."""
+    hass = MagicMock()
+    hass.data = {}
+
+    entry = MagicMock()
+    entry.entry_id = "test_entry"
+    entry.data = {
+        CONF_ADDRESS: "AA:BB:CC:DD:EE:FF",
+        CONF_DEVICE_IDS: [1],
+        CONF_SCAN_INTERVAL: 30,
+    }
+
+    mock_coordinator = MagicMock()
+    mock_coordinator.address = "AA:BB:CC:DD:EE:FF"
+    mock_coordinator.data = {
+        1: {
+            "device_type": "battery",
+            "model": "Smart Lithium 1",
+            "is_available": True,
+            "heater_on": True,
+            "fully_charged": False,
+            "alarms": ["short_circuit"],
+            "warnings": [],
+        }
+    }
+    mock_coordinator.last_update_success = True
+
+    hass.data[DOMAIN] = {
+        entry.entry_id: {
+            "coordinator": mock_coordinator,
+        }
+    }
+
+    from custom_components.renogy_ble.binary_sensor import (
+        async_setup_entry as async_setup_binary_sensors,
+    )
+
+    async_add_entities = MagicMock()
+    await async_setup_binary_sensors(hass, entry, async_add_entities)
+
+    assert async_add_entities.called
+    created_entities = async_add_entities.call_args[0][0]
+
+    # Verify heater binary sensor
     heater_sensor = next(
         entity
         for entity in created_entities
         if entity.entity_description.key == "heater_on"
     )
-    assert heater_sensor.native_value == "on"
+    assert heater_sensor.is_on is True
+    assert heater_sensor.available is True
 
+    # Verify fully charged binary sensor
     charged_sensor = next(
         entity
         for entity in created_entities
         if entity.entity_description.key == "fully_charged"
     )
-    assert charged_sensor.native_value == "off"
+    assert charged_sensor.is_on is False
 
+    # Verify alarms active binary sensor
     alarms_sensor = next(
         entity
         for entity in created_entities
         if entity.entity_description.key == "alarms_active"
     )
-    assert alarms_sensor.native_value == "on"
+    assert alarms_sensor.is_on is True

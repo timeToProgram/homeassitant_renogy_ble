@@ -16,8 +16,10 @@ We have successfully redesigned and re-implemented the Renogy BLE Home Assistant
 - **`sensor.py`**: Dynamically creates sensor entities based on the probed device types and configured device IDs. Also:
   - If there are multiple batteries, it dynamically adds a set of aggregate battery sensors that average voltages and temperatures while summing currents, powers, total capacity, and remaining capacity.
   - Dynamically registers cell-specific voltage and temperature sensors (`Cell 1 Voltage`, `Cell 2 Voltage`, etc.) based on telemetry returned from the battery's BMS, along with their respective cell-average entities (`Average Cell Voltage`, `Average Cell Temperature`).
-  - Added status/BMS status sensors for each device type that report status (e.g. `"Normal"`, `"Alarm"`, `"Warning"`, `"Fault"`) along with state attributes containing a copy of all telemetry details.
-  - Exposed every individual binary status flag, alarm condition, and warning list as a separate sensor entity (returning `"on"`/`"off"` or string lists) defined inside `SENSOR_DESCRIPTIONS` to give users full granular access directly under the `sensor` platform.
+  - Centralizes all entity definitions inside `SENSOR_DESCRIPTIONS` (both standard sensors and binary status/diagnostic sensors). Adds a boolean `is_binary` flag to `RenogyBLESensorDescription` to dynamically route entities to the correct platform.
+  - Completely removed the `extra_attributes_fn` callback and attributes dictionary mapping, exposing every attribute as a standalone sensor instead.
+  - Removed all manual `round()` calls from within entity `value_fn` definitions, letting Home Assistant handle the display precision formatting automatically.
+- **`binary_sensor.py`**: [NEW] Dynamically sets up binary sensor entities (`BinarySensorEntity`) under the `binary_sensor` platform by loading the centralized descriptions from `sensor.py` where `is_binary` is set to `True` (e.g. `Heater Active`, `Fully Charged`, `Charging Active`, etc.), ensuring they report true boolean states (`True`/`False`) instead of string values.
 - **`switch.py`**: Exposes load switch entities for controllers, sending the corresponding Modbus writes to toggle load status.
 - **`manifest.json`**: Upgraded requirements to use bleak-retry-connector.
 
@@ -38,5 +40,5 @@ All unit tests have been written/updated to match the new architecture, covering
 - Test runner output:
 ```bash
 $ uv run pytest tests
-======================== 27 passed in 1.13s =========================
+======================== 28 passed in 1.15s =========================
 ```

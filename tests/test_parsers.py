@@ -1,6 +1,6 @@
 """Tests for device data parsers."""
 
-from custom_components.renogy.parsers import (
+from custom_components.renogy_ble.parsers import (
     DeviceType,
     get_registers_for_device,
     parse_battery_alarm_info,
@@ -98,7 +98,8 @@ def test_parse_battery_temp_info() -> None:
 
 def test_parse_battery_info() -> None:
     """Test battery main info parsing."""
-    # current: -10A (-1000 units), voltage: 12.8V (128 units), remaining: 80Ah, total: 100Ah
+    # current: -10A (-1000 units), voltage: 12.8V (128 units),
+    # remaining: 80Ah, total: 100Ah
     data = b"\x01\x03\x0c\xfc\x18\x00\x80\x00\x01\x38\x80\x00\x01\x86\xa0"
     parsed = parse_battery_info(data)
     assert parsed["current"] == -10.0
@@ -129,8 +130,10 @@ def test_parse_battery_device_info() -> None:
 
 def test_parse_inverter_main_status() -> None:
     """Test inverter main status parsing."""
-    # input_v: 0, input_c: 0, output_v: 120.0V (1200 units), output_c: 5.0A (500 units), frequency: 60Hz (6000 units)
-    # battery_v: 12.8V (128 units), temp: 25.0C (250 units), status high/low: 0, input_freq: 0
+    # input_v: 0, input_c: 0, output_v: 120.0V (1200 units),
+    # output_c: 5.0A (500 units), frequency: 60Hz (6000 units)
+    # battery_v: 12.8V (128 units), temp: 25.0C (250 units),
+    # status high/low: 0, input_freq: 0
     data = (
         b"\x01\x03\x14"
         + b"\xff\xff"  # input_v

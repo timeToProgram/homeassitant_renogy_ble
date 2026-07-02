@@ -36,8 +36,8 @@ class RenogyBLESensorDescription(SensorEntityDescription):
     """Describes a Renogy BLE sensor."""
 
     value_fn: Optional[Callable[[Dict[str, Any]], Any]] = None
-    extra_attributes_fn: Optional[Callable[[Dict[str, Any]], Dict[str, Any]]] = None
     suggested_display_precision: int | None = 1
+    is_binary: bool = False
 
 
 SENSOR_DESCRIPTIONS: Dict[str, List[RenogyBLESensorDescription]] = {
@@ -215,32 +215,26 @@ SENSOR_DESCRIPTIONS: Dict[str, List[RenogyBLESensorDescription]] = {
                 if len(data.get("faults", [])) > 0
                 else ("Warning" if len(data.get("warnings", [])) > 0 else "Normal")
             ),
-            extra_attributes_fn=lambda data: {
-                "load_status": data.get("load_status"),
-                "fault_count": data.get("fault_count", 0),
-                "warning_count": data.get("warning_count", 0),
-                "faults": data.get("faults", []),
-                "warnings": data.get("warnings", []),
-            },
         ),
         RenogyBLESensorDescription(
             key="load_status",
             name="DC Load Status",
             value_fn=lambda data: (
-                "on"
-                if data.get("load_status") == "on" or data.get("load_status") is True
-                else "off"
+                data.get("load_status") == "on" or data.get("load_status") is True
             ),
+            is_binary=True,
         ),
         RenogyBLESensorDescription(
             key="faults_active",
             name="Faults Present",
-            value_fn=lambda data: "on" if len(data.get("faults", [])) > 0 else "off",
+            value_fn=lambda data: len(data.get("faults", [])) > 0,
+            is_binary=True,
         ),
         RenogyBLESensorDescription(
             key="warnings_active",
             name="Warnings Present",
-            value_fn=lambda data: "on" if len(data.get("warnings", [])) > 0 else "off",
+            value_fn=lambda data: len(data.get("warnings", [])) > 0,
+            is_binary=True,
         ),
         RenogyBLESensorDescription(
             key="controller_faults",
@@ -351,7 +345,7 @@ SENSOR_DESCRIPTIONS: Dict[str, List[RenogyBLESensorDescription]] = {
             device_class=SensorDeviceClass.VOLTAGE,
             state_class=SensorStateClass.MEASUREMENT,
             value_fn=lambda data: (
-                round(sum(data["cell_voltages"]) / len(data["cell_voltages"]), 3)
+                sum(data["cell_voltages"]) / len(data["cell_voltages"])
                 if "cell_voltages" in data and data["cell_voltages"]
                 else None
             ),
@@ -380,7 +374,7 @@ SENSOR_DESCRIPTIONS: Dict[str, List[RenogyBLESensorDescription]] = {
             device_class=SensorDeviceClass.TEMPERATURE,
             state_class=SensorStateClass.MEASUREMENT,
             value_fn=lambda data: (
-                round(sum(data["temperatures"]) / len(data["temperatures"]), 1)
+                sum(data["temperatures"]) / len(data["temperatures"])
                 if "temperatures" in data and data["temperatures"]
                 else None
             ),
@@ -393,85 +387,78 @@ SENSOR_DESCRIPTIONS: Dict[str, List[RenogyBLESensorDescription]] = {
                 if len(data.get("alarms", [])) > 0
                 else ("Warning" if len(data.get("warnings", [])) > 0 else "Normal")
             ),
-            extra_attributes_fn=lambda data: {
-                "heater_on": data.get("heater_on", False),
-                "fully_charged": data.get("fully_charged", False),
-                "effective_charge": data.get("effective_charge", False),
-                "effective_discharge": data.get("effective_discharge", False),
-                "charge_enabled": data.get("charge_enabled", False),
-                "discharge_enabled": data.get("discharge_enabled", False),
-                "using_battery_power": data.get("using_battery_power", False),
-                "buzzer_on": data.get("buzzer_on", False),
-                "charge_immediately": data.get("charge_immediately", False),
-                "full_charge_request": data.get("full_charge_request", False),
-                "alarm_count": data.get("alarm_count", 0),
-                "warning_count": data.get("warning_count", 0),
-                "alarms": data.get("alarms", []),
-                "cell_voltage_alarms": data.get("cell_voltage_alarms", []),
-                "cell_temperature_alarms": data.get("cell_temperature_alarms", []),
-                "protection_alarms": data.get("protection_alarms", []),
-                "warnings": data.get("warnings", []),
-            },
         ),
         RenogyBLESensorDescription(
             key="heater_on",
             name="Heater Active",
-            value_fn=lambda data: "on" if data.get("heater_on") else "off",
+            value_fn=lambda data: bool(data.get("heater_on")),
+            is_binary=True,
         ),
         RenogyBLESensorDescription(
             key="fully_charged",
             name="Fully Charged",
-            value_fn=lambda data: "on" if data.get("fully_charged") else "off",
+            value_fn=lambda data: bool(data.get("fully_charged")),
+            is_binary=True,
         ),
         RenogyBLESensorDescription(
             key="effective_charge",
             name="Charging Active",
-            value_fn=lambda data: "on" if data.get("effective_charge") else "off",
+            value_fn=lambda data: bool(data.get("effective_charge")),
+            is_binary=True,
         ),
         RenogyBLESensorDescription(
             key="effective_discharge",
             name="Discharging Active",
-            value_fn=lambda data: "on" if data.get("effective_discharge") else "off",
+            value_fn=lambda data: bool(data.get("effective_discharge")),
+            is_binary=True,
         ),
         RenogyBLESensorDescription(
             key="charge_enabled",
             name="Charging Enabled",
-            value_fn=lambda data: "on" if data.get("charge_enabled") else "off",
+            value_fn=lambda data: bool(data.get("charge_enabled")),
+            is_binary=True,
         ),
         RenogyBLESensorDescription(
             key="discharge_enabled",
             name="Discharging Enabled",
-            value_fn=lambda data: "on" if data.get("discharge_enabled") else "off",
+            value_fn=lambda data: bool(data.get("discharge_enabled")),
+            is_binary=True,
         ),
         RenogyBLESensorDescription(
             key="using_battery_power",
             name="Using Battery Power",
-            value_fn=lambda data: "on" if data.get("using_battery_power") else "off",
+            value_fn=lambda data: bool(data.get("using_battery_power")),
+            is_binary=True,
         ),
         RenogyBLESensorDescription(
             key="buzzer_on",
             name="BMS Buzzer Active",
-            value_fn=lambda data: "on" if data.get("buzzer_on") else "off",
+            value_fn=lambda data: bool(data.get("buzzer_on")),
+            is_binary=True,
         ),
         RenogyBLESensorDescription(
             key="charge_immediately",
             name="Charge Immediately Request",
-            value_fn=lambda data: "on" if data.get("charge_immediately") else "off",
+            value_fn=lambda data: bool(data.get("charge_immediately")),
+            is_binary=True,
         ),
         RenogyBLESensorDescription(
             key="full_charge_request",
             name="Full Charge Request",
-            value_fn=lambda data: "on" if data.get("full_charge_request") else "off",
+            value_fn=lambda data: bool(data.get("full_charge_request")),
+            is_binary=True,
         ),
         RenogyBLESensorDescription(
             key="alarms_active",
             name="Alarms Present",
-            value_fn=lambda data: "on" if len(data.get("alarms", [])) > 0 else "off",
+            value_fn=lambda data: len(data.get("alarms", [])) > 0,
+            is_binary=True,
         ),
         RenogyBLESensorDescription(
             key="warnings_active",
             name="Warnings Present",
-            value_fn=lambda data: "on" if len(data.get("warnings", [])) > 0 else "off",
+            value_fn=lambda data: len(data.get("warnings", [])) > 0,
+            is_binary=True,
         ),
         RenogyBLESensorDescription(
             key="cell_voltage_alarms",
@@ -704,45 +691,42 @@ SENSOR_DESCRIPTIONS: Dict[str, List[RenogyBLESensorDescription]] = {
             value_fn=lambda data: (
                 "Fault" if len(data.get("faults", [])) > 0 else "Normal"
             ),
-            extra_attributes_fn=lambda data: {
-                "eco_mode": data.get("eco_mode", False),
-                "ups_line_interactive": data.get("ups_line_interactive", False),
-                "test_in_progress": data.get("test_in_progress", False),
-                "beeper_on": data.get("beeper_on", False),
-                "power_saving_mode": data.get("power_saving_mode", False),
-                "fault_count": data.get("fault_count", 0),
-                "faults": data.get("faults", []),
-            },
         ),
         RenogyBLESensorDescription(
             key="eco_mode",
             name="ECO Mode",
-            value_fn=lambda data: "on" if data.get("eco_mode") else "off",
+            value_fn=lambda data: bool(data.get("eco_mode")),
+            is_binary=True,
         ),
         RenogyBLESensorDescription(
             key="ups_line_interactive",
             name="UPS Line Interactive Status",
-            value_fn=lambda data: "on" if data.get("ups_line_interactive") else "off",
+            value_fn=lambda data: bool(data.get("ups_line_interactive")),
+            is_binary=True,
         ),
         RenogyBLESensorDescription(
             key="test_in_progress",
             name="Self Test In Progress",
-            value_fn=lambda data: "on" if data.get("test_in_progress") else "off",
+            value_fn=lambda data: bool(data.get("test_in_progress")),
+            is_binary=True,
         ),
         RenogyBLESensorDescription(
             key="beeper_on",
             name="Beeper Active",
-            value_fn=lambda data: "on" if data.get("beeper_on") else "off",
+            value_fn=lambda data: bool(data.get("beeper_on")),
+            is_binary=True,
         ),
         RenogyBLESensorDescription(
             key="power_saving_mode",
             name="Power Saving Mode",
-            value_fn=lambda data: "on" if data.get("power_saving_mode") else "off",
+            value_fn=lambda data: bool(data.get("power_saving_mode")),
+            is_binary=True,
         ),
         RenogyBLESensorDescription(
             key="faults_active",
             name="Faults Present",
-            value_fn=lambda data: "on" if len(data.get("faults", [])) > 0 else "off",
+            value_fn=lambda data: len(data.get("faults", [])) > 0,
+            is_binary=True,
         ),
         RenogyBLESensorDescription(
             key="inverter_faults",
@@ -771,11 +755,7 @@ BATTERY_AGGREGATE_DESCRIPTIONS = [
         device_class=SensorDeviceClass.VOLTAGE,
         state_class=SensorStateClass.MEASUREMENT,
         value_fn=lambda battery_datas: (
-            round(
-                sum(data.get("voltage", 0.0) for data in battery_datas)
-                / len(battery_datas),
-                2,
-            )
+            sum(data.get("voltage", 0.0) for data in battery_datas) / len(battery_datas)
             if battery_datas
             else 0.0
         ),
@@ -787,11 +767,8 @@ BATTERY_AGGREGATE_DESCRIPTIONS = [
         device_class=SensorDeviceClass.TEMPERATURE,
         state_class=SensorStateClass.MEASUREMENT,
         value_fn=lambda battery_datas: (
-            round(
-                sum(data.get("battery_temperature", 0.0) for data in battery_datas)
-                / len(battery_datas),
-                1,
-            )
+            sum(data.get("battery_temperature", 0.0) for data in battery_datas)
+            / len(battery_datas)
             if battery_datas
             else 0.0
         ),
@@ -802,10 +779,7 @@ BATTERY_AGGREGATE_DESCRIPTIONS = [
         native_unit_of_measurement="Ah",
         state_class=SensorStateClass.MEASUREMENT,
         value_fn=lambda battery_datas: (
-            round(
-                sum(data.get("total_capacity", 0.0) for data in battery_datas),
-                1,
-            )
+            sum(data.get("total_capacity", 0.0) for data in battery_datas)
             if battery_datas
             else 0.0
         ),
@@ -816,10 +790,7 @@ BATTERY_AGGREGATE_DESCRIPTIONS = [
         native_unit_of_measurement="Ah",
         state_class=SensorStateClass.MEASUREMENT,
         value_fn=lambda battery_datas: (
-            round(
-                sum(data.get("remaining_capacity", 0.0) for data in battery_datas),
-                1,
-            )
+            sum(data.get("remaining_capacity", 0.0) for data in battery_datas)
             if battery_datas
             else 0.0
         ),
@@ -831,10 +802,7 @@ BATTERY_AGGREGATE_DESCRIPTIONS = [
         device_class=SensorDeviceClass.CURRENT,
         state_class=SensorStateClass.MEASUREMENT,
         value_fn=lambda battery_datas: (
-            round(
-                sum(data.get("current", 0.0) for data in battery_datas),
-                2,
-            )
+            sum(data.get("current", 0.0) for data in battery_datas)
             if battery_datas
             else 0.0
         ),
@@ -846,10 +814,7 @@ BATTERY_AGGREGATE_DESCRIPTIONS = [
         device_class=SensorDeviceClass.POWER,
         state_class=SensorStateClass.MEASUREMENT,
         value_fn=lambda battery_datas: (
-            round(
-                sum(data.get("power", 0.0) for data in battery_datas),
-                2,
-            )
+            sum(data.get("power", 0.0) for data in battery_datas)
             if battery_datas
             else 0.0
         ),
@@ -860,14 +825,11 @@ BATTERY_AGGREGATE_DESCRIPTIONS = [
         native_unit_of_measurement=PERCENTAGE,
         state_class=SensorStateClass.MEASUREMENT,
         value_fn=lambda battery_datas: (
-            round(
-                (
-                    sum(data.get("remaining_capacity", 0.0) for data in battery_datas)
-                    / sum(data.get("total_capacity", 0.001) for data in battery_datas)
-                )
-                * 100,
-                1,
+            (
+                sum(data.get("remaining_capacity", 0.0) for data in battery_datas)
+                / sum(data.get("total_capacity", 0.001) for data in battery_datas)
             )
+            * 100
             if battery_datas
             else 0.0
         ),
@@ -902,6 +864,8 @@ async def async_setup_entry(
 
         descriptions = SENSOR_DESCRIPTIONS.get(device_type, [])
         for desc in descriptions:
+            if desc.is_binary:
+                continue
             # Only add cell sensors if battery has those cells/temperatures
             if (
                 desc.key.startswith("cell_voltage_")
@@ -977,6 +941,14 @@ class RenogyBLESensor(PassiveBluetoothCoordinatorEntity, SensorEntity):
         self._attr_suggested_display_precision = description.suggested_display_precision
 
     @property
+    def suggested_display_precision(self) -> int | None:
+        """Return the suggested display precision."""
+        val = self.native_value
+        if isinstance(val, (int, float)) and not isinstance(val, bool):
+            return self.entity_description.suggested_display_precision
+        return None
+
+    @property
     def native_value(self) -> Any:
         """Return the sensor's value."""
         device_data = self.coordinator.data.get(self.device_id)
@@ -996,18 +968,6 @@ class RenogyBLESensor(PassiveBluetoothCoordinatorEntity, SensorEntity):
 
         device_data = self.coordinator.data.get(self.device_id)
         return device_data is not None and device_data.get("is_available", False)
-
-    @property
-    def extra_state_attributes(self) -> Dict[str, Any] | None:
-        """Return the state attributes of the sensor."""
-        device_data = self.coordinator.data.get(self.device_id)
-        if not device_data:
-            return None
-
-        if self.entity_description.extra_attributes_fn:
-            return self.entity_description.extra_attributes_fn(device_data)
-
-        return None
 
 
 class RenogyBatteryAggregateSensor(PassiveBluetoothCoordinatorEntity, SensorEntity):
