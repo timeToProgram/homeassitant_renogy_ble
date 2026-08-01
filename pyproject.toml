@@ -9,7 +9,7 @@ dependencies = [
     "aiousbwatcher>=1.1.2",
     "homeassistant>=2026.4.4",
     "mashumaro>=3.22",
-    "renogy-ble==2.3.1",
+    "renogy-ble==2.4.0",
     "serialx>=1.8.2",
 ]
 
