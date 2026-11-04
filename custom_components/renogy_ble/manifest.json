@@ -21,6 +21,9 @@
       "local_name": "RNGRIU*"
     }
   ],
+  "categories": [
+    "energy.solar_batteries"
+  ],
   "codeowners": ["@IAmTheMitchell"],
   "config_flow": true,
   "dependencies": ["bluetooth_adapters"],
