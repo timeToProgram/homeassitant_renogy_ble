@@ -1,6 +1,13 @@
 # CHANGELOG
 
 
+## [0.7.2](https://github.com/timeToProgram/homeassitant_renogy_ble/compare/v0.7.1...v0.7.2) (2026-11-04)
+
+
+### Bug Fixes
+
+* relocate brand assets to integration directory and add categories to manifest ([4098f5a](https://github.com/timeToProgram/homeassitant_renogy_ble/commit/4098f5a2e936a900c63b3eb0573240dd51380865))
+
 ## [0.7.1](https://github.com/IAmTheMitchell/renogy-ha/compare/v0.7.0...v0.7.1) (2026-04-25)
 
 

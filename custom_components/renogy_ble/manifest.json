@@ -24,12 +24,18 @@
   "categories": [
     "energy.solar_batteries"
   ],
-  "codeowners": ["@IAmTheMitchell"],
+  "codeowners": [
+    "@IAmTheMitchell"
+  ],
   "config_flow": true,
-  "dependencies": ["bluetooth_adapters"],
+  "dependencies": [
+    "bluetooth_adapters"
+  ],
   "documentation": "https://github.com/IAmTheMitchell/renogy-ha",
   "iot_class": "local_polling",
   "issue_tracker": "https://github.com/IAmTheMitchell/renogy-ha/issues",
-  "requirements": ["bleak-retry-connector>=3.5.0"],
-  "version": "1.0.0"
+  "requirements": [
+    "bleak-retry-connector>=3.5.0"
+  ],
+  "version": "0.7.2"
 }
