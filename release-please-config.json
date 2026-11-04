@@ -11,7 +11,7 @@
       "extra-files": [
         {
           "type": "json",
-          "path": "custom_components/renogy/manifest.json",
+          "path": "custom_components/renogy_ble/manifest.json",
           "jsonpath": "$.version"
         }
       ]
